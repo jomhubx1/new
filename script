@@ -278,7 +278,7 @@ TopBar.BackgroundColor3 = C.TopBar
 TopBar.BackgroundTransparency = 0.15
 TopBar.Parent = Win
 local Title = createLabel(TopBar, " [ SYSTEM ] JOMHUB", Enum.TextXAlignment.Left, Enum.Font.GothamBold, 14, C.Accent)
-Title.Size = UDim2.new(1, 0 - 15, 1, 0)
+Title.Size = UDim2.new(1, -15, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
 
 local TabScroll = Instance.new("ScrollingFrame")
@@ -304,7 +304,7 @@ TabPad.PaddingBottom = UDim.new(0, 5)
 TabPad.Parent = TabScroll
 
 local ContentArea = Instance.new("Frame")
-ContentArea.Size = UDim2.new(1, 0, 1, 0 - 85)
+ContentArea.Size = UDim2.new(1, 0, 1, -85)
 ContentArea.Position = UDim2.new(0, 0, 0, 85)
 ContentArea.BackgroundTransparency = 1
 ContentArea.Parent = Win
@@ -417,7 +417,7 @@ function Library:CreateTab(name)
         round(tgl, 8)
         
         local lbl = createLabel(tgl, title, Enum.TextXAlignment.Left, Enum.Font.Gotham, 13, C.Text)
-        lbl.Size = UDim2.new(1, 0 - 60, 1, 0); lbl.Position = UDim2.new(0, 15, 0, 0)
+        lbl.Size = UDim2.new(1, -60, 1, 0); lbl.Position = UDim2.new(0, 15, 0, 0)
         
         local switch = Instance.new("Frame")
         switch.Size = UDim2.new(0, 40, 0, 22)
@@ -460,13 +460,13 @@ function Library:CreateTab(name)
         btn.Parent = drop
         
         local lbl = createLabel(btn, title .. ": " .. (default or "None"), Enum.TextXAlignment.Left, Enum.Font.Gotham, 13, C.Text)
-        lbl.Size = UDim2.new(1, 0 - 40, 1, 0); lbl.Position = UDim2.new(0, 15, 0, 0)
+        lbl.Size = UDim2.new(1, -40, 1, 0); lbl.Position = UDim2.new(0, 15, 0, 0)
         
         local icon = createLabel(btn, "+", Enum.TextXAlignment.Right, Enum.Font.GothamBold, 16, C.Accent)
-        icon.Size = UDim2.new(0, 20, 1, 0); icon.Position = UDim2.new(1, 0 - 25, 0, 0)
+        icon.Size = UDim2.new(0, 20, 1, 0); icon.Position = UDim2.new(1, -25, 0, 0)
         
         local listFrame = Instance.new("Frame")
-        listFrame.Size = UDim2.new(1, 0, 1, 0 - 45)
+        listFrame.Size = UDim2.new(1, 0, 1, -45)
         listFrame.Position = UDim2.new(0, 0, 0, 45)
         listFrame.BackgroundTransparency = 1
         listFrame.Parent = drop
@@ -521,7 +521,7 @@ function Library:CreateTab(name)
         lbl.Size = UDim2.new(1, 0 - 30, 0, 30); lbl.Position = UDim2.new(0, 15, 0, 0)
         
         local bg = Instance.new("Frame")
-        bg.Size = UDim2.new(1, 0 - 30, 0, 6)
+        bg.Size = UDim2.new(1, -30, 0, 6)
         bg.Position = UDim2.new(0, 15, 0, 38)
         bg.BackgroundColor3 = C.TopBar
         bg.Parent = slider
@@ -576,13 +576,13 @@ function Library:CreateTab(name)
         btn.Parent = drop
         
         local lbl = createLabel(btn, title, Enum.TextXAlignment.Left, Enum.Font.Gotham, 13, C.Text)
-        lbl.Size = UDim2.new(1, 0 - 40, 1, 0); lbl.Position = UDim2.new(0, 15, 0, 0)
+        lbl.Size = UDim2.new(1, -40, 1, 0); lbl.Position = UDim2.new(0, 15, 0, 0)
         
         local icon = createLabel(btn, "+", Enum.TextXAlignment.Right, Enum.Font.GothamBold, 16, C.Accent)
-        icon.Size = UDim2.new(0, 20, 1, 0); icon.Position = UDim2.new(1, 0 - 25, 0, 0)
+        icon.Size = UDim2.new(0, 20, 1, 0); icon.Position = UDim2.new(1, -25, 0, 0)
         
         local listFrame = Instance.new("Frame")
-        listFrame.Size = UDim2.new(1, 0, 1, 0 - 45)
+        listFrame.Size = UDim2.new(1, 0, 1, -45)
         listFrame.Position = UDim2.new(0, 0, 0, 45)
         listFrame.BackgroundTransparency = 1
         listFrame.Parent = drop
