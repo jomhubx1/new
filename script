@@ -33,8 +33,30 @@ local S = {
     autoHuntBoss = false,
     huntBosses = {},
     huntHopTimer = 60,
-    lastBossHuntTarget = ""
-}
+    lastBossHuntTarget = "",
+    autoSummon = false,
+    summonTargets = {},
+    summonDiff = "Normal",
+    autoDungeon = false,
+    dungeonType = "CidDungeon",
+    dungeonDiff = "Normal",
+    dungeonPos = "Behind"}
+
+local function mergeConfig(dst, src)
+    for k, v in pairs(src) do
+        if type(v) == "table" and type(dst[k]) == "table" then mergeConfig(dst[k], v) else dst[k] = v end
+    end
+end
+
+if readfile and isfile and isfolder then
+    if isfile("JomHUB_Configs/SailorPieceMobile_autoload.txt") then
+        local cfgName = readfile("JomHUB_Configs/SailorPieceMobile_autoload.txt")
+        if isfile("JomHUB_Configs/"..cfgName..".json") then
+            local success, data = pcall(function() return HttpService:JSONDecode(readfile("JomHUB_Configs/"..cfgName..".json")) end)
+            if success and type(data) == "table" then mergeConfig(S, data) end
+        end
+    end
+end
 
 -- GAME REMOTES
 local RemoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents", 5)
@@ -142,6 +164,12 @@ if ShowNotification then
                 if S.lastTargetedCrystalPos then
                     S.claimedSpawns[S.lastTargetedCrystalPos] = true
                 end
+                elseif string.find(msg, "portal is already active") or string.find(msg, "wait for it to despawn") then
+                    S.portalPauseTick = tick()
+                elseif S.autoDungeon and (string.find(msg, "difficulty") or string.find(msg, "vote") or string.find(msg, "normal")) then
+                    local currentRemotes = ReplicatedStorage:FindFirstChild("Remotes")
+                    local waveVote = currentRemotes and currentRemotes:FindFirstChild("DungeonWaveVote")
+                    if waveVote then pcall(function() waveVote:FireServer(S.dungeonDiff) end) end
             end
         end
     end)
@@ -738,20 +766,60 @@ MainTab:CreateDropdown("Select Boss", BOSS_LIST, "None", function(val)
 end)
 
 MainTab:CreateSection("Weapons Setup")
-MainTab:CreateToggle("Auto Equip Melee", true, function(val) S.autoMelee = val end)
-MainTab:CreateToggle("Auto Equip Sword", false, function(val) S.autoSword = val end)
-MainTab:CreateToggle("Auto Equip Fruit", false, function(val) S.autoFruit = val end)
+MainTab:CreateToggle("Auto Equip Melee", S.autoMelee, function(val) S.autoMelee = val end)
+MainTab:CreateToggle("Auto Equip Sword", S.autoSword, function(val) S.autoSword = val end)
+MainTab:CreateToggle("Auto Equip Fruit", S.autoFruit, function(val) S.autoFruit = val end)
 MainTab:CreateMultiDropdown("Auto Skills", {"Skill Z", "Skill X", "Skill C", "Skill V", "Skill F"}, S.autoSkills, function(val) S.autoSkills = val end)
 
 MainTab:CreateSection("Settings")
-MainTab:CreateDropdown("Teleport Mode", {"Tween", "Instant"}, "Instant", function(val) S.teleportMode = val end)
-MainTab:CreateDropdown("Farm Position", {"Above", "Behind"}, "Behind", function(val) S.farmPos = val end)
-MainTab:CreateSlider("Distance", 0, 10, 8, function(val) S.farmDistance = val end)
+MainTab:CreateDropdown("Teleport Mode", {"Tween", "Instant"}, S.teleportMode, function(val) S.teleportMode = val end)
+MainTab:CreateDropdown("Farm Position", {"Above", "Behind"}, S.farmPos, function(val) S.farmPos = val end)
+MainTab:CreateSlider("Distance", 0, 10, S.farmDistance, function(val) S.farmDistance = val end)
 
 local BossTab = Library:CreateTab("Boss Hunt")
 BossTab:CreateMultiDropdown("Target Bosses", BOSS_LIST, {}, function(val) S.huntBosses = val end)
 BossTab:CreateToggle("Auto Hunt & Hop", false, function(val) S.autoHuntBoss = val end)
 BossTab:CreateSlider("Hop If Timer > (Sec)", 0, 600, 60, function(val) S.huntHopTimer = val end)
+
+BossTab:CreateSection("Auto Summon")
+local SUMMON_BOSS_LIST = {
+    "SaberBoss", "QinShiBoss", "IchigoBoss", "GilgameshBoss", "GojoBoss",
+    "BlessedMaidenBoss", "SaberAlterBoss", "AtomicBoss", "TrueAizenBoss",
+    "AnosBoss", "RimuruBoss", "StrongestofTodayBoss", "StrongestinHistoryBoss"
+}
+BossTab:CreateMultiDropdown("Summon Targets", SUMMON_BOSS_LIST, {}, function(val) S.summonTargets = val end)
+BossTab:CreateDropdown("Difficulty", {"Normal", "Medium", "Hard", "Extreme"}, "Normal", function(val) S.summonDiff = val end)
+BossTab:CreateToggle("Auto Summon Boss", false, function(val) S.autoSummon = val end)
+
+local DungeonTab = Library:CreateTab("Dungeon")
+DungeonTab:CreateDropdown("Dungeon Type", {"CidDungeon", "RuneDungeon", "DoubleDungeon", "BossRush"}, S.dungeonType, function(val) S.dungeonType = val end)
+DungeonTab:CreateDropdown("Difficulty", {"Normal", "Medium", "Hard", "Extreme"}, S.dungeonDiff, function(val) S.dungeonDiff = val end)
+DungeonTab:CreateDropdown("Dungeon Pos", {"Above", "Behind"}, S.dungeonPos, function(val) S.dungeonPos = val end)
+DungeonTab:CreateToggle("Auto Dungeon", S.autoDungeon, function(val) 
+    S.autoDungeon = val 
+    if writefile then
+        if not isfolder("JomHUB_Configs") then pcall(makefolder, "JomHUB_Configs") end
+        if val then
+            local dungeonConfig = {
+                autoDungeon = true,
+                dungeonType = S.dungeonType,
+                dungeonDiff = S.dungeonDiff,
+                dungeonPos = S.dungeonPos,
+                autoMelee = S.autoMelee,
+                autoSword = S.autoSword,
+                autoFruit = S.autoFruit,
+                autoSkills = S.autoSkills,
+                teleportMode = S.teleportMode,
+                farmDistance = S.farmDistance
+            }
+            local s, data = pcall(function() return HttpService:JSONEncode(dungeonConfig) end)
+            if s then pcall(writefile, "JomHUB_Configs/SailorPieceMobile_Dungeon.json", data) end
+            pcall(writefile, "JomHUB_Configs/SailorPieceMobile_autoload.txt", "SailorPieceMobile_Dungeon")
+        else
+            pcall(writefile, "JomHUB_Configs/SailorPieceMobile_autoload.txt", "")
+        end
+    end
+end)
 
 local ShopTab = Library:CreateTab("Shop & Stats")
 ShopTab:CreateToggle("Auto Stats (Melee)", false, function(val) end)
@@ -857,7 +925,7 @@ local function SmartTeleport(targetCFrame)
     local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
     
     local conn = RunService.Heartbeat:Connect(function()
-        if not (S.AutoLevelActive or S.AutoFarmActive or S.autoHuntBoss) or not char or hum.Health <= 0 then tween:Cancel() end
+        if not (S.AutoLevelActive or S.AutoFarmActive or S.autoHuntBoss or S.autoDungeon) or not char or hum.Health <= 0 then tween:Cancel() end
     end)
     
     tween:Play()
@@ -985,7 +1053,7 @@ end
 -- Required Noclip logic to safely Tween
 RunService.Stepped:Connect(function()
     local char = LocalPlayer.Character
-    if (S.AutoLevelActive or S.AutoFarmActive or S.autoHuntBoss) and char then
+    if (S.AutoLevelActive or S.AutoFarmActive or S.autoHuntBoss or S.autoDungeon) and char then
         for _, v in pairs(char:GetDescendants()) do
             if v:IsA("BasePart") then v.CanCollide = false end
         end
@@ -994,6 +1062,70 @@ RunService.Stepped:Connect(function()
         if fbv then fbv:Destroy() end
         local tbv = char.HumanoidRootPart:FindFirstChild("JomTeleportBV")
         if tbv then tbv:Destroy() end
+    end
+end)
+
+-- AUTO SUMMON LOOP
+task.spawn(function()
+    while task.wait(1) do
+        if S.autoSummon and S.summonTargets then
+            local char = LocalPlayer.Character
+            if char and (not char:GetAttribute("LastBossSummon") or tick() - char:GetAttribute("LastBossSummon") > 8) then
+                
+                local re = ReplicatedStorage:FindFirstChild("RemoteEvents")
+                local rem = ReplicatedStorage:FindFirstChild("Remotes")
+                local diff = S.summonDiff or "Normal"
+                
+                local anySummoned = false
+                
+                for targetBoss, isSelected in pairs(S.summonTargets) do
+                    if isSelected then
+                        anySummoned = true
+                        pcall(function()
+                            -- Group 1: No Difficulty Option
+                            if targetBoss == "SaberBoss" or targetBoss == "QinShiBoss" or targetBoss == "IchigoBoss" or targetBoss == "GilgameshBoss" or targetBoss == "GojoBoss" then
+                                if rem and rem:FindFirstChild("RequestSummonBoss") then
+                                    rem.RequestSummonBoss:FireServer(targetBoss)
+                                end
+                            -- Group 2: Difficulty Options
+                            elseif targetBoss == "BlessedMaidenBoss" or targetBoss == "SaberAlterBoss" then
+                                if rem and rem:FindFirstChild("RequestSummonBoss") then
+                                    rem.RequestSummonBoss:FireServer(targetBoss, diff)
+                                end
+                            elseif targetBoss == "AtomicBoss" then
+                                if re and re:FindFirstChild("RequestSpawnAtomic") then
+                                    re.RequestSpawnAtomic:FireServer(diff)
+                                end
+                            elseif targetBoss == "TrueAizenBoss" then
+                                if re and re:FindFirstChild("RequestSpawnTrueAizen") then
+                                    re.RequestSpawnTrueAizen:FireServer(diff)
+                                end
+                            elseif targetBoss == "AnosBoss" then
+                                if rem and rem:FindFirstChild("RequestSpawnAnosBoss") then
+                                    rem.RequestSpawnAnosBoss:FireServer("Anos", diff)
+                                end
+                            elseif targetBoss == "RimuruBoss" then
+                                if re and re:FindFirstChild("RequestSpawnRimuru") then
+                                    re.RequestSpawnRimuru:FireServer(diff)
+                                end
+                            elseif targetBoss == "StrongestofTodayBoss" then
+                                if rem and rem:FindFirstChild("RequestSpawnStrongestBoss") then
+                                    rem.RequestSpawnStrongestBoss:FireServer("StrongestToday", diff)
+                                end
+                            elseif targetBoss == "StrongestinHistoryBoss" then
+                                if rem and rem:FindFirstChild("RequestSpawnStrongestBoss") then
+                                    rem.RequestSpawnStrongestBoss:FireServer("StrongestHistory", diff)
+                                end
+                            end
+                        end)
+                    end
+                end
+                
+                if anySummoned then
+                    char:SetAttribute("LastBossSummon", tick())
+                end
+            end
+        end
     end
 end)
 
@@ -1057,6 +1189,35 @@ local function getPhysicalTimer(bName)
     return nil
 end
 
+-- AUTO DUNGEON EXECUTION LOOP
+task.spawn(function()
+    while task.wait(1) do
+        local currentRemotes = ReplicatedStorage:FindFirstChild("Remotes")
+        local reqPortal = currentRemotes and currentRemotes:FindFirstChild("RequestDungeonPortal")
+        local waveVote = currentRemotes and currentRemotes:FindFirstChild("DungeonWaveVote")
+
+        if S.autoDungeon then
+            if game.PlaceId == 77747658251236 then
+                    local pt = type(S.portalPauseTick) == "number" and S.portalPauseTick or 0
+                    if tick() - pt > 32 then
+                        if reqPortal then pcall(function() reqPortal:FireServer(S.dungeonType) end) end
+                    end
+            elseif game.PlaceId == 75159314259063 or game.PlaceId == 99684056491472 or game.PlaceId == 123955125827131 or game.PlaceId == 96767841099256 then
+                if waveVote then 
+                    pcall(function() waveVote:FireServer(S.dungeonDiff) end)
+                    pcall(function()
+                        local pg = LocalPlayer:FindFirstChild("PlayerGui")
+                        if pg then
+                            local ui = pg:FindFirstChild("DungeonWaveUI") or pg:FindFirstChild("WaveUI") or pg:FindFirstChild("DifficultyUI")
+                            if ui and ui.Enabled then ui.Enabled = false end
+                        end
+                    end)
+                end
+            end
+        end
+    end
+end)
+
 -- AUTO LEVEL & FARM LOOP (Simplified Quest Logic)
 local currentTargetCrystal = nil
 task.spawn(function()
@@ -1065,6 +1226,12 @@ task.spawn(function()
     local lastAttackTick = 0
     local hopDelayStartTick = 0
     while task.wait() do
+                local isInDungeonEnv = (game.PlaceId == 75159314259063 or game.PlaceId == 99684056491472 or game.PlaceId == 123955125827131 or game.PlaceId == 96767841099256)
+        if S.autoDungeon and isInDungeonEnv then 
+            task.wait(0.5)
+            continue
+        end
+        
         if not S.AutoLevelActive and not S.AutoFarmActive and not S.autoHuntBoss then 
             local char = LocalPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -1504,5 +1671,79 @@ task.spawn(function()
             if fbv then fbv:Destroy() end
             task.wait(0.5)
         end
+    end
+end)
+
+-- DUNGEON FARM LOOP
+task.spawn(function()
+    while task.wait() do
+        local isInDungeonEnv = (game.PlaceId == 75159314259063 or game.PlaceId == 99684056491472 or game.PlaceId == 123955125827131 or game.PlaceId == 96767841099256)
+        if S.autoDungeon and isInDungeonEnv and NPCs then
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChild("Humanoid")
+            
+            if hrp and hum and hum.Health > 0 then
+                local allEnemies = {}
+                for _, npc in ipairs(NPCs:GetChildren()) do
+                    local nHum = npc:FindFirstChild("Humanoid")
+                    local nRoot = npc:FindFirstChild("HumanoidRootPart")
+                    if nHum and nHum.Health > 0 and nRoot then
+                        table.insert(allEnemies, nRoot)
+                    end
+                end
+                
+                if #allEnemies > 0 then
+                    local minDist = math.huge
+                    local closestRoot = nil
+                    for _, root in ipairs(allEnemies) do
+                        local dist = (hrp.Position - root.Position).Magnitude
+                        if dist < minDist then
+                            minDist = dist
+                            closestRoot = root
+                        end
+                    end
+                    local nRoot = closestRoot or allEnemies[1]
+                    
+                    pcall(function()
+                        local nHum = nRoot.Parent:FindFirstChild("Humanoid")
+                        if nHum then nHum.WalkSpeed = 0; nHum.JumpPower = 0 end
+                        nRoot.CanCollide = false
+                        pcall(function() nRoot.AssemblyLinearVelocity = Vector3.zero end)
+                    end)
+                    
+                    local goalCF = getFarmPosition(nRoot, S.farmDistance, S.dungeonPos)
+                    
+                    if (hrp.Position - goalCF.Position).Magnitude > 50 then
+                        SmartTeleport(goalCF)
+                    else
+                        local fbv2 = hrp:FindFirstChild("JomFarmBV")
+                        if not fbv2 then
+                            fbv2 = Instance.new("LinearVelocity")
+                            fbv2.Name = "JomFarmBV"
+                            fbv2.MaxForce = math.huge
+                            fbv2.VectorVelocity = Vector3.zero
+                            fbv2.RelativeTo = Enum.ActuatorRelativeTo.World
+                            fbv2.Attachment0 = hrp:FindFirstChildOfClass("Attachment") or Instance.new("Attachment", hrp)
+                            fbv2.Parent = hrp
+                        end
+                        
+                        if (hrp.Position - goalCF.Position).Magnitude > 5 then hrp.CFrame = goalCF end
+                        pcall(function() hrp.AssemblyLinearVelocity = Vector3.zero end)
+                        
+                        local lastAtk = char:GetAttribute("DungLastAttack") or 0
+                        if tick() - lastAtk > 0.1 then
+                            char:SetAttribute("DungLastAttack", tick())
+                            local weapons = getWeaponsToUse()
+                            local loopWeapons = #weapons > 0 and weapons or {false}
+                            for _, wep in ipairs(loopWeapons) do
+                                if wep and typeof(wep) == "Instance" and wep.Parent ~= char then pcall(function() hum:EquipTool(wep) end); task.wait(0.05) end
+                                executeAttacks(nRoot.Parent)
+                            end
+                        end
+                    end
+                end
+            end
+        else task.wait(0.5) end
     end
 end)
