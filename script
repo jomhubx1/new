@@ -40,7 +40,9 @@ local S = {
     autoDungeon = false,
     dungeonType = "CidDungeon",
     dungeonDiff = "Normal",
-    dungeonPos = "Behind"}
+    dungeonPos = "Behind",
+    autoInfiniteTower = false,
+    infiniteTowerPos = "Behind"}
 
 local function mergeConfig(dst, src)
     for k, v in pairs(src) do
@@ -821,6 +823,32 @@ DungeonTab:CreateToggle("Auto Dungeon", S.autoDungeon, function(val)
     end
 end)
 
+DungeonTab:CreateSection("Infinite Tower")
+DungeonTab:CreateDropdown("Tower Pos", {"Above", "Behind"}, S.infiniteTowerPos, function(val) S.infiniteTowerPos = val end)
+DungeonTab:CreateToggle("Auto Infinite Tower", S.autoInfiniteTower, function(val) 
+    S.autoInfiniteTower = val 
+    if writefile then
+        if not isfolder("JomHUB_Configs") then pcall(makefolder, "JomHUB_Configs") end
+        if val then
+            local itConfig = {
+                autoInfiniteTower = true,
+                infiniteTowerPos = S.infiniteTowerPos,
+                autoMelee = S.autoMelee,
+                autoSword = S.autoSword,
+                autoFruit = S.autoFruit,
+                autoSkills = S.autoSkills,
+                teleportMode = S.teleportMode,
+                farmDistance = S.farmDistance
+            }
+            local s, data = pcall(function() return HttpService:JSONEncode(itConfig) end)
+            if s then pcall(writefile, "JomHUB_Configs/SailorPieceMobile_InfiniteTower.json", data) end
+            pcall(writefile, "JomHUB_Configs/SailorPieceMobile_autoload.txt", "SailorPieceMobile_InfiniteTower")
+        else
+            pcall(writefile, "JomHUB_Configs/SailorPieceMobile_autoload.txt", "")
+        end
+    end
+end)
+
 local ShopTab = Library:CreateTab("Shop & Stats")
 ShopTab:CreateToggle("Auto Stats (Melee)", false, function(val) end)
 ShopTab:CreateToggle("Auto Stats (Defense)", false, function(val) end)
@@ -925,7 +953,7 @@ local function SmartTeleport(targetCFrame)
     local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
     
     local conn = RunService.Heartbeat:Connect(function()
-        if not (S.AutoLevelActive or S.AutoFarmActive or S.autoHuntBoss or S.autoDungeon) or not char or hum.Health <= 0 then tween:Cancel() end
+        if not (S.AutoLevelActive or S.AutoFarmActive or S.autoHuntBoss or S.autoDungeon or S.autoInfiniteTower) or not char or hum.Health <= 0 then tween:Cancel() end
     end)
     
     tween:Play()
@@ -1053,7 +1081,7 @@ end
 -- Required Noclip logic to safely Tween
 RunService.Stepped:Connect(function()
     local char = LocalPlayer.Character
-    if (S.AutoLevelActive or S.AutoFarmActive or S.autoHuntBoss or S.autoDungeon) and char then
+    if (S.AutoLevelActive or S.AutoFarmActive or S.autoHuntBoss or S.autoDungeon or S.autoInfiniteTower) and char then
         for _, v in pairs(char:GetDescendants()) do
             if v:IsA("BasePart") then v.CanCollide = false end
         end
@@ -1196,19 +1224,35 @@ task.spawn(function()
         local reqPortal = currentRemotes and currentRemotes:FindFirstChild("RequestDungeonPortal")
         local waveVote = currentRemotes and currentRemotes:FindFirstChild("DungeonWaveVote")
 
-        if S.autoDungeon then
+        if S.autoDungeon or S.autoInfiniteTower then
             if game.PlaceId == 77747658251236 then
                     local pt = type(S.portalPauseTick) == "number" and S.portalPauseTick or 0
                     if tick() - pt > 32 then
-                        if reqPortal then pcall(function() reqPortal:FireServer(S.dungeonType) end) end
-                    end
+                        if reqPortal then 
+                            if S.autoInfiniteTower then
+                                pcall(function() reqPortal:FireServer("InfiniteTower") end)
+                            elseif S.autoDungeon then
+                                pcall(function() reqPortal:FireServer(S.dungeonType) end)
+                            end
+                        end                    end
             elseif game.PlaceId == 75159314259063 or game.PlaceId == 99684056491472 or game.PlaceId == 123955125827131 or game.PlaceId == 96767841099256 then
-                if waveVote then 
+                if S.autoDungeon and waveVote then 
                     pcall(function() waveVote:FireServer(S.dungeonDiff) end)
                     pcall(function()
                         local pg = LocalPlayer:FindFirstChild("PlayerGui")
                         if pg then
                             local ui = pg:FindFirstChild("DungeonWaveUI") or pg:FindFirstChild("WaveUI") or pg:FindFirstChild("DifficultyUI")
+                            if ui and ui.Enabled then ui.Enabled = false end
+                        end
+                    end)
+                end
+            elseif game.PlaceId == 138368689293913 then
+                if S.autoInfiniteTower and waveVote then
+                    pcall(function() waveVote:FireServer("start") end)
+                    pcall(function()
+                        local pg = LocalPlayer:FindFirstChild("PlayerGui")
+                        if pg then
+                            local ui = pg:FindFirstChild("InfiniteTowerUI") or pg:FindFirstChild("TowerUI")
                             if ui and ui.Enabled then ui.Enabled = false end
                         end
                     end)
@@ -1227,7 +1271,8 @@ task.spawn(function()
     local hopDelayStartTick = 0
     while task.wait() do
                 local isInDungeonEnv = (game.PlaceId == 75159314259063 or game.PlaceId == 99684056491472 or game.PlaceId == 123955125827131 or game.PlaceId == 96767841099256)
-        if S.autoDungeon and isInDungeonEnv then 
+        local isInInfiniteTower = (game.PlaceId == 138368689293913)
+        if (S.autoDungeon and isInDungeonEnv) or (S.autoInfiniteTower and isInInfiniteTower) then 
             task.wait(0.5)
             continue
         end
@@ -1678,7 +1723,8 @@ end)
 task.spawn(function()
     while task.wait() do
         local isInDungeonEnv = (game.PlaceId == 75159314259063 or game.PlaceId == 99684056491472 or game.PlaceId == 123955125827131 or game.PlaceId == 96767841099256)
-        if S.autoDungeon and isInDungeonEnv and NPCs then
+        local isInInfiniteTower = (game.PlaceId == 138368689293913)
+        if ((S.autoDungeon and isInDungeonEnv) or (S.autoInfiniteTower and isInInfiniteTower)) and NPCs then
             local char = LocalPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
             local hum = char and char:FindFirstChild("Humanoid")
@@ -1712,7 +1758,8 @@ task.spawn(function()
                         pcall(function() nRoot.AssemblyLinearVelocity = Vector3.zero end)
                     end)
                     
-                    local goalCF = getFarmPosition(nRoot, S.farmDistance, S.dungeonPos)
+                    local currentPos = isInInfiniteTower and S.infiniteTowerPos or S.dungeonPos
+                    local goalCF = getFarmPosition(nRoot, S.farmDistance, currentPos)
                     
                     if (hrp.Position - goalCF.Position).Magnitude > 50 then
                         SmartTeleport(goalCF)
