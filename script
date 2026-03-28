@@ -492,13 +492,16 @@ function Library:CreateTab(name)
         listContainer.Visible = false
         listContainer.ClipsDescendants = true
         listContainer.ZIndex = 100
-        listContainer.Parent = Win
+        listContainer.Parent = Gui
 
         local listScroll = Instance.new("ScrollingFrame")
         listScroll.Size = UDim2.new(1, 0, 1, 0)
         listScroll.BackgroundTransparency = 1
         listScroll.ScrollBarThickness = 3
         listScroll.ScrollBarImageColor3 = C.Accent
+        listScroll.ZIndex = 101
+        listScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+        listScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
         listScroll.Parent = listContainer
         
         local dList = Instance.new("UIListLayout")
@@ -522,13 +525,17 @@ function Library:CreateTab(name)
                 local finalHeight = math.min(totalHeight, maxHeight)
 
                 listContainer.Size = UDim2.new(0, btn.AbsoluteSize.X, 0, finalHeight)
-                local xPos = btn.AbsolutePosition.X - Win.AbsolutePosition.X
-                local yPos = btn.AbsolutePosition.Y - Win.AbsolutePosition.Y + btn.AbsoluteSize.Y
+                local xPos = btn.AbsolutePosition.X
+                local yPos = btn.AbsolutePosition.Y + btn.AbsoluteSize.Y
                 if (btn.AbsolutePosition.Y + btn.AbsoluteSize.Y + finalHeight) > Gui.AbsoluteSize.Y then
-                    yPos = btn.AbsolutePosition.Y - Win.AbsolutePosition.Y - finalHeight
+                    yPos = btn.AbsolutePosition.Y - finalHeight
                 end
                 listContainer.Position = UDim2.new(0, xPos, 0, yPos)
             end
+        end)
+        
+        Page:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+            if listContainer.Visible then listContainer.Visible = false; activeDropdown = nil; icon.Text = "+" end
         end)
         
         for _, item in ipairs(list) do
@@ -540,6 +547,7 @@ function Library:CreateTab(name)
             iBtn.Font = Enum.Font.Gotham
             iBtn.TextSize = 13
             iBtn.TextXAlignment = Enum.TextXAlignment.Left
+            iBtn.ZIndex = 102
             iBtn.BorderSizePixel = 0
             iBtn.AutoButtonColor = false
             iBtn.Parent = listScroll
@@ -633,13 +641,16 @@ function Library:CreateTab(name)
         listContainer.Visible = false
         listContainer.ClipsDescendants = true
         listContainer.ZIndex = 100
-        listContainer.Parent = Win
+        listContainer.Parent = Gui
 
         local listScroll = Instance.new("ScrollingFrame")
         listScroll.Size = UDim2.new(1, 0, 1, 0)
         listScroll.BackgroundTransparency = 1
         listScroll.ScrollBarThickness = 3
         listScroll.ScrollBarImageColor3 = C.Accent
+        listScroll.ZIndex = 101
+        listScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+        listScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
         listScroll.Parent = listContainer
         
         local dList = Instance.new("UIListLayout")
@@ -663,13 +674,17 @@ function Library:CreateTab(name)
                 local finalHeight = math.min(totalHeight, maxHeight)
 
                 listContainer.Size = UDim2.new(0, btn.AbsoluteSize.X, 0, finalHeight)
-                local xPos = btn.AbsolutePosition.X - Win.AbsolutePosition.X
-                local yPos = btn.AbsolutePosition.Y - Win.AbsolutePosition.Y + btn.AbsoluteSize.Y
+                local xPos = btn.AbsolutePosition.X
+                local yPos = btn.AbsolutePosition.Y + btn.AbsoluteSize.Y
                 if (btn.AbsolutePosition.Y + btn.AbsoluteSize.Y + finalHeight) > Gui.AbsoluteSize.Y then
-                    yPos = btn.AbsolutePosition.Y - Win.AbsolutePosition.Y - finalHeight
+                    yPos = btn.AbsolutePosition.Y - finalHeight
                 end
                 listContainer.Position = UDim2.new(0, xPos, 0, yPos)
             end
+        end)
+        
+        Page:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+            if listContainer.Visible then listContainer.Visible = false; activeDropdown = nil; icon.Text = "+" end
         end)
         
         local function updateLabel()
@@ -680,7 +695,7 @@ function Library:CreateTab(name)
             local iBtn = Instance.new("TextButton")
             iBtn.Size = UDim2.new(1, 0, 0, 35)
             iBtn.BackgroundColor3 = C.ElementBG
-            iBtn.Text = "  " .. item .. (selected[item] and " [ON]" or ""); iBtn.TextColor3 = selected[item] and C.Accent or C.Muted; iBtn.Font = Enum.Font.Gotham; iBtn.TextSize = 13; iBtn.TextXAlignment = Enum.TextXAlignment.Left; iBtn.BorderSizePixel = 0; iBtn.AutoButtonColor = false; iBtn.Parent = listScroll
+            iBtn.Text = "  " .. item .. (selected[item] and " [ON]" or ""); iBtn.TextColor3 = selected[item] and C.Accent or C.Muted; iBtn.Font = Enum.Font.Gotham; iBtn.TextSize = 13; iBtn.TextXAlignment = Enum.TextXAlignment.Left; iBtn.ZIndex = 102; iBtn.BorderSizePixel = 0; iBtn.AutoButtonColor = false; iBtn.Parent = listScroll
             iBtn.MouseEnter:Connect(function() iBtn.BackgroundColor3 = C.ElementHover end)
             iBtn.MouseLeave:Connect(function() iBtn.BackgroundColor3 = C.ElementBG end)
             
