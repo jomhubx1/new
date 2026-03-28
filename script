@@ -241,10 +241,12 @@ UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragToggle = false end
 end)
 
--- Main Window container (Responsive size, perfectly centers on any screen)
 local Win = Instance.new("Frame")
-local screen = Gui.AbsoluteSize.X > 0 and Gui.AbsoluteSize or workspace.CurrentCamera.ViewportSize
-Win.Size = UDim2.new(0, math.min(screen.X * 0.92, 680), 0, math.min(screen.Y * 0.80, 480))
+local camera = workspace.CurrentCamera
+local screen = camera and camera.ViewportSize or Vector2.new(800, 600)
+local winW = math.min(math.max(screen.X * 0.75, 300), 560)
+local winH = math.min(math.max(screen.Y * 0.65, 280), 420)
+Win.Size = UDim2.new(0, winW, 0, winH)
 Win.Position = UDim2.new(0.5, 0, 0.5, 0)
 Win.AnchorPoint = Vector2.new(0.5, 0.5)
 Win.BackgroundColor3 = C.BG
@@ -272,8 +274,8 @@ end)
 
 -- Constraints to ensure it doesn't stretch or shrink improperly
 local SizeConst = Instance.new("UISizeConstraint")
-SizeConst.MinSize = Vector2.new(300, 280)
-SizeConst.MaxSize = Vector2.new(680, 480)
+SizeConst.MinSize = Vector2.new(280, 260)
+SizeConst.MaxSize = Vector2.new(560, 420)
 SizeConst.Parent = Win
 
 local TopBar = Instance.new("Frame")
