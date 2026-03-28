@@ -210,14 +210,15 @@ end
 -- Floating Open/Close Button (Touch Friendly)
 local OpenBtn = Instance.new("TextButton")
 OpenBtn.Size = UDim2.new(0, 50, 0, 50)
+OpenBtn.Position = UDim2.new(1, -65, 0.15, 0)
 OpenBtn.BackgroundColor3 = C.TopBar
 OpenBtn.Text = "JOM"
 OpenBtn.TextColor3 = C.Accent
 OpenBtn.Font = Enum.Font.GothamBold
 OpenBtn.TextSize = 14
 OpenBtn.BorderSizePixel = 0
+OpenBtn.Visible = false
 OpenBtn.Parent = Gui
-round(OpenBtn, 25)
 local OpenStroke = Instance.new("UIStroke")
 OpenStroke.Color = C.Accent
 OpenStroke.Thickness = 2
@@ -256,12 +257,14 @@ WinStroke.Thickness = 2
 WinStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 WinStroke.Parent = Win
 
+-- Cycle the Loading Screen string in RGB
 task.spawn(function()
     local hue = 0
-    while Gui.Parent do
-        hue = hue + 0.005
+    while LoadFrame and LoadFrame.Parent do
+        hue = hue + 0.015
         if hue > 1 then hue = 0 end
-        if WinStroke.Parent then WinStroke.Color = Color3.fromHSV(hue, 1, 1) end
+        local rgbColor = Color3.fromHSV(hue, 1, 1)
+        if LoadTitle and LoadTitle.Parent then LoadTitle.TextColor3 = rgbColor end
         task.wait(0.03)
     end
 end)
@@ -279,6 +282,26 @@ TopBar.Parent = Win
 local Title = createLabel(TopBar, " [ SYSTEM ] JOMHUB", Enum.TextXAlignment.Left, Enum.Font.GothamBold, 14, C.Accent)
 Title.Size = UDim2.new(1, -15, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
+
+_G.ActiveRGBToggles = {}
+
+-- Moves RGB loop under the Title definition so the Title string cycles RGB
+task.spawn(function()
+    local hue = 0
+    while Gui.Parent do
+        hue = hue + 0.005
+        if hue > 1 then hue = 0 end
+        local rgbColor = Color3.fromHSV(hue, 1, 1)
+        if WinStroke.Parent then WinStroke.Color = rgbColor end
+        if OpenStroke.Parent then OpenStroke.Color = rgbColor end
+        if Title.Parent then Title.TextColor3 = rgbColor end
+        for switchFrame, _ in pairs(_G.ActiveRGBToggles) do
+            if switchFrame.Parent then switchFrame.BackgroundColor3 = rgbColor
+            else _G.ActiveRGBToggles[switchFrame] = nil end
+        end
+        task.wait(0.03)
+    end
+end)
 
 local TabScroll = Instance.new("ScrollingFrame")
 TabScroll.Size = UDim2.new(1, 0, 0, 40)
@@ -413,7 +436,6 @@ function Library:CreateTab(name)
         tgl.Text = ""
         tgl.AutoButtonColor = false
         tgl.Parent = Page
-        round(tgl, 8)
         
         local lbl = createLabel(tgl, title, Enum.TextXAlignment.Left, Enum.Font.Gotham, 13, C.Text)
         lbl.Size = UDim2.new(1, -60, 1, 0); lbl.Position = UDim2.new(0, 15, 0, 0)
@@ -424,20 +446,21 @@ function Library:CreateTab(name)
         switch.Position = UDim2.new(1, -15, 0.5, 0)
         switch.BackgroundColor3 = state and C.Accent or C.TopBar
         switch.Parent = tgl
-        round(switch, 11)
         
-        local circle = Instance.new("Frame")
-        circle.Size = UDim2.new(0, 16, 0, 16)
-        circle.AnchorPoint = Vector2.new(0, 0.5)
-        circle.Position = UDim2.new(0, state and 21 or 3, 0.5, 0)
-        circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        circle.Parent = switch
-        round(circle, 8)
+        local box = Instance.new("Frame")
+        box.Size = UDim2.new(0, 16, 0, 16)
+        box.AnchorPoint = Vector2.new(0, 0.5)
+        box.Position = UDim2.new(0, state and 21 or 3, 0.5, 0)
+        box.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        box.BorderSizePixel = 0
+        box.Parent = switch
         
+        if state then _G.ActiveRGBToggles[switch] = true end
+
         tgl.Activated:Connect(function()
             state = not state
-            TweenService:Create(switch, TweenInfo.new(0.2), {BackgroundColor3 = state and C.Accent or C.TopBar}):Play()
-            TweenService:Create(circle, TweenInfo.new(0.2), {Position = UDim2.new(0, state and 21 or 3, 0.5, 0)}):Play()
+            if state then _G.ActiveRGBToggles[switch] = true else _G.ActiveRGBToggles[switch] = nil; TweenService:Create(switch, TweenInfo.new(0.2), {BackgroundColor3 = C.TopBar}):Play() end
+            TweenService:Create(box, TweenInfo.new(0.2), {Position = UDim2.new(0, state and 21 or 3, 0.5, 0)}):Play()
             if callback then callback(state) end
         end)
     end
@@ -445,12 +468,12 @@ function Library:CreateTab(name)
     -- 100% Width Mobile Friendly Dropdown
     function Elements:CreateDropdown(title, list, default, callback)
         list = list or {}
+        local currentSelected = default
         local drop = Instance.new("Frame")
         drop.Size = UDim2.new(1, 0, 0, 45)
         drop.BackgroundColor3 = C.ElementBG
         drop.ClipsDescendants = true
         drop.Parent = Page
-        round(drop, 8)
         
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, 0, 0, 45)
@@ -495,11 +518,18 @@ function Library:CreateTab(name)
             iBtn.Parent = listFrame
             
             iBtn.Activated:Connect(function()
-                lbl.Text = title .. ": " .. item
+                if currentSelected == item then
+                    currentSelected = nil
+                    lbl.Text = title .. ": None"
+                    if callback then callback(nil) end
+                else
+                    currentSelected = item
+                    lbl.Text = title .. ": " .. item
+                    if callback then callback(item) end
+                end
                 open = false
                 icon.Text = "+"
                 TweenService:Create(drop, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 45)}):Play()
-                if callback then callback(item) end
             end)
         end
     end
@@ -565,7 +595,6 @@ function Library:CreateTab(name)
         drop.BackgroundColor3 = C.ElementBG
         drop.ClipsDescendants = true
         drop.Parent = Page
-        round(drop, 8)
         
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, 0, 0, 45)
@@ -644,12 +673,12 @@ MainTab:CreateToggle("Auto Farm (Manual)", false, function(val)
 end)
 
 local MOB_LIST = {"Thief", "ThiefBoss", "Monkey", "MonkeyBoss", "DesertBandit", "DesertBoss", "FrostRogue", "SnowBoss", "Sorcerer", "PandaMiniBoss", "Hollow", "StrongSorcerer", "Curse", "Slime", "AcademyTeacher", "Swordsman", "Quincy", "Ninja", "ArenaFighter"}
-MainTab:CreateDropdown("Select Mob", MOB_LIST, "Thief", function(val)
+MainTab:CreateDropdown("Select Mob", MOB_LIST, "None", function(val)
     S.selectedMob = val
 end)
 
 local BOSS_LIST = {"AizenBoss", "AlucardBoss", "AnosBoss", "AtomicBoss", "BlessedMaidenBoss", "DesertBoss", "EscanorBoss", "GilgameshBoss", "GojoBoss", "IchigoBoss", "JinwooBoss", "MadokaBoss", "MonkeyBoss", "PandaMiniBoss", "QinShiBoss", "RagnaBoss", "RimuruBoss", "SaberAlterBoss", "SaberBoss", "ShadowBoss", "ShadowMonarchBoss", "SnowBoss", "StrongestinHistoryBoss", "StrongestofTodayBoss", "StrongestShinobiBoss", "SukunaBoss", "ThiefBoss", "TrueAizenBoss", "YamatoBoss", "YujiBoss"}
-MainTab:CreateDropdown("Select Boss", BOSS_LIST, "SaberBoss", function(val)
+MainTab:CreateDropdown("Select Boss", BOSS_LIST, "None", function(val)
     S.selectedMob = val
 end)
 
@@ -673,6 +702,28 @@ local ShopTab = Library:CreateTab("Shop & Stats")
 ShopTab:CreateToggle("Auto Stats (Melee)", false, function(val) end)
 ShopTab:CreateToggle("Auto Stats (Defense)", false, function(val) end)
 
+local LoadFrame = Instance.new("Frame")
+LoadFrame.Size = UDim2.new(0, 250, 0, 100)
+LoadFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+LoadFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+LoadFrame.BackgroundColor3 = C.BG
+LoadFrame.BorderSizePixel = 0
+LoadFrame.ZIndex = 200
+LoadFrame.Parent = Gui
+round(LoadFrame, 8)
+
+local LoadTitle = createLabel(LoadFrame, "JOMHUB", Enum.TextXAlignment.Center, Enum.Font.GothamBold, 24, C.Accent)
+LoadTitle.Size = UDim2.new(1, 0, 0, 30); LoadTitle.Position = UDim2.new(0, 0, 0, 15); LoadTitle.ZIndex = 201
+
+local LoadSub = createLabel(LoadFrame, "Initializing...", Enum.TextXAlignment.Center, Enum.Font.Gotham, 12, C.Text)
+LoadSub.Size = UDim2.new(1, 0, 0, 20); LoadSub.Position = UDim2.new(0, 0, 0, 45); LoadSub.ZIndex = 201
+
+local LoadBarBg = Instance.new("Frame")
+LoadBarBg.Size = UDim2.new(0.8, 0, 0, 6); LoadBarBg.Position = UDim2.new(0.1, 0, 0, 75); LoadBarBg.BackgroundColor3 = C.TopBar; LoadBarBg.BorderSizePixel = 0; LoadBarBg.ZIndex = 201; LoadBarBg.Parent = LoadFrame; round(LoadBarBg, 3)
+
+local LoadBarFill = Instance.new("Frame")
+LoadBarFill.Size = UDim2.new(0, 0, 1, 0); LoadBarFill.BackgroundColor3 = C.Accent; LoadBarFill.BorderSizePixel = 0; LoadBarFill.ZIndex = 202; LoadBarFill.Parent = LoadBarBg; round(LoadBarFill, 3)
+
 task.spawn(function()
     local steps = {
         {t = "Hooking Game Engine...", p = 0.3, d = 0.6},
@@ -689,7 +740,6 @@ task.spawn(function()
     task.wait(0.3)
     if LoadFrame then
         TweenService:Create(LoadFrame, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
-        TweenService:Create(LoadStroke, TweenInfo.new(0.5), {Transparency = 1}):Play()
         TweenService:Create(LoadTitle, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
         TweenService:Create(LoadSub, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
         TweenService:Create(LoadBarBg, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
