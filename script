@@ -241,9 +241,9 @@ UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragToggle = false end
 end)
 
--- Main Window container (92% of screen width, perfectly centers on any phone)
+-- Main Window container (Fixed size, perfectly centers on any screen)
 local Win = Instance.new("Frame")
-Win.Size = UDim2.new(0.92, 0, 0.85, 0)
+Win.Size = UDim2.new(0, 680, 0, 480)
 Win.Position = UDim2.new(0.5, 0, 0.5, 0)
 Win.AnchorPoint = Vector2.new(0.5, 0.5)
 Win.BackgroundColor3 = C.BG
@@ -269,9 +269,10 @@ task.spawn(function()
     end
 end)
 
--- Max Size constraint limits it so it doesn't get overly huge on Tablets
+-- Constraints to ensure it doesn't stretch or shrink improperly
 local SizeConst = Instance.new("UISizeConstraint")
-SizeConst.MaxSize = Vector2.new(500, 650)
+SizeConst.MinSize = Vector2.new(400, 300)
+SizeConst.MaxSize = Vector2.new(680, 480)
 SizeConst.Parent = Win
 
 local TopBar = Instance.new("Frame")
