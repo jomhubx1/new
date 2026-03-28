@@ -152,9 +152,8 @@ task.spawn(function()
         task.wait(1)
         for k, info in pairs(BossTimersCache) do
             if not info.isAlive then
-                if type(info.timer) == "number" and info.timer > 0 then
-                    info.timer = info.timer - 1
-                end
+                local t = type(info.timer) == "number" and info.timer or 0
+                if t > 0 then info.timer = t - 1 end
             end
         end
     end
@@ -422,7 +421,7 @@ function Library:CreateTab(name)
         local switch = Instance.new("Frame")
         switch.Size = UDim2.new(0, 40, 0, 22)
         switch.AnchorPoint = Vector2.new(1, 0.5)
-        switch.Position = UDim2.new(1, 0 - 15, 0.5, 0)
+        switch.Position = UDim2.new(1, -15, 0.5, 0)
         switch.BackgroundColor3 = state and C.Accent or C.TopBar
         switch.Parent = tgl
         round(switch, 11)
@@ -505,11 +504,10 @@ function Library:CreateTab(name)
         end
     end
 
-    function Elements:CreateSlider(title, min, max, default, callback)local safeMin = tonumber(min) or 0
-	local safeMin = tonumber(min) or 0
-	local safeMax = tonumber(max) or 100
-	local safeDefault = tonumber(default) or safeMin
-	if safeMax <= safeMin then safeMax = safeMin + 1 end
+    function Elements:CreateSlider(title, min, max, default, callback)
+        local safeMin = min or 0
+        local safeMax = max or 100
+        local safeDefault = default or safeMin
         
         local slider = Instance.new("Frame")
         slider.Size = UDim2.new(1, 0, 0, 60)
@@ -518,7 +516,7 @@ function Library:CreateTab(name)
         round(slider, 8)
         
         local lbl = createLabel(slider, title .. ": " .. safeDefault, Enum.TextXAlignment.Left, Enum.Font.Gotham, 13, C.Text)
-        lbl.Size = UDim2.new(1, 0 - 30, 0, 30); lbl.Position = UDim2.new(0, 15, 0, 0)
+        lbl.Size = UDim2.new(1, -30, 0, 30); lbl.Position = UDim2.new(0, 15, 0, 0)
         
         local bg = Instance.new("Frame")
         bg.Size = UDim2.new(1, -30, 0, 6)
@@ -539,7 +537,7 @@ function Library:CreateTab(name)
         
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, 0, 1, 20)
-        btn.Position = UDim2.new(0, 0, 0, 0 - 10)
+        btn.Position = UDim2.new(0, 0, 0, -10)
         btn.BackgroundTransparency = 1
         btn.Text = ""
         btn.Parent = bg
@@ -676,7 +674,29 @@ ShopTab:CreateToggle("Auto Stats (Melee)", false, function(val) end)
 ShopTab:CreateToggle("Auto Stats (Defense)", false, function(val) end)
 
 task.spawn(function()
-    task.wait(0.5)
+    local steps = {
+        {t = "Hooking Game Engine...", p = 0.3, d = 0.6},
+        {t = "LOADING ASSETS...", p = 0.6, d = 0.7},
+        {t = "Bypassing Anti-Cheat...", p = 0.85, d = 0.6},
+        {t = "Initializing UI...", p = 1, d = 0.5}
+    }
+    for _, s in ipairs(steps) do
+        if LoadSub then LoadSub.Text = s.t end
+        if LoadBarFill then TweenService:Create(LoadBarFill, TweenInfo.new(s.d), {Size = UDim2.new(s.p, 0, 1, 0)}):Play() end
+        task.wait(s.d)
+    end
+    if LoadSub then LoadSub.Text = "Completed!" end
+    task.wait(0.3)
+    if LoadFrame then
+        TweenService:Create(LoadFrame, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
+        TweenService:Create(LoadStroke, TweenInfo.new(0.5), {Transparency = 1}):Play()
+        TweenService:Create(LoadTitle, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
+        TweenService:Create(LoadSub, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
+        TweenService:Create(LoadBarBg, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
+        TweenService:Create(LoadBarFill, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
+        task.wait(0.5)
+        LoadFrame:Destroy()
+    end
     if OpenBtn then OpenBtn.Visible = true end
 end)
 
@@ -752,10 +772,10 @@ local function getFarmPosition(targetRoot, baseDistance, posType)
     
     if posType == "Above" then 
         tpPos = enemyPos + Vector3.new(0, baseDistance, 0)
-        return CFrame.new(tpPos) * CFrame.Angles(math.rad(0 - 90), 0, 0)
+        return CFrame.new(tpPos) * CFrame.Angles(math.rad(-90), 0, 0)
     else
         local lookVec = targetRoot.CFrame.LookVector
-        local angle = math.atan2(0 - lookVec.X, 0 - lookVec.Z)
+        local angle = math.atan2(-lookVec.X, -lookVec.Z)
         local flatCF = CFrame.new(enemyPos) * CFrame.Angles(0, angle, 0)
         
         tpPos = (flatCF * CFrame.new(0, 0, baseDistance)).Position
@@ -1026,9 +1046,8 @@ task.spawn(function()
             
             local function isLocallyDead(bName)
                 local deadTick = LocallyDeadBosses[bName]
-                if type(deadTick) == "number" then
-                    if tick() - deadTick < 1800 then return true end
-                end
+                local dt = type(deadTick) == "number" and deadTick or 0
+                if dt > 0 and (tick() - dt < 1800) then return true end
                 return false
             end
             
