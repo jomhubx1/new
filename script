@@ -20,9 +20,9 @@ local S = {
     autoMelee = true,
     autoSword = false,
     autoFruit = false,
-    teleportMode = "Tween",
-    farmPos = "Above",
-    farmDistance = 10,
+    teleportMode = "Instant",
+    farmPos = "Behind",
+    farmDistance = 8,
     lastPortal = "",
     lastAutoQuest = "",
     AutoFarmActive = false,
@@ -357,6 +357,7 @@ end)
 local Library = {}
 local tabs = {}
 local currentTab = nil
+local activeDropdown = nil
 
 function Library:CreateTab(name)
     local tBtn = Instance.new("TextButton")
@@ -399,6 +400,7 @@ function Library:CreateTab(name)
     table.insert(tabs, tabInfo)
     
     tBtn.Activated:Connect(function()
+        if activeDropdown then activeDropdown.Visible = false; activeDropdown = nil end
         for _, v in ipairs(tabs) do
             v.Btn.TextColor3 = C.Muted
             v.Btn.BackgroundColor3 = C.ElementBG
@@ -469,40 +471,64 @@ function Library:CreateTab(name)
     function Elements:CreateDropdown(title, list, default, callback)
         list = list or {}
         local currentSelected = default
-        local drop = Instance.new("Frame")
-        drop.Size = UDim2.new(1, 0, 0, 45)
-        drop.BackgroundColor3 = C.ElementBG
-        drop.ClipsDescendants = true
-        drop.Parent = Page
         
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, 0, 0, 45)
-        btn.BackgroundTransparency = 1
+        btn.BackgroundColor3 = C.ElementBG
         btn.Text = ""
-        btn.Parent = drop
+        btn.AutoButtonColor = false
+        btn.Parent = Page
         
         local lbl = createLabel(btn, title .. ": " .. (default or "None"), Enum.TextXAlignment.Left, Enum.Font.Gotham, 13, C.Text)
         lbl.Size = UDim2.new(1, -40, 1, 0); lbl.Position = UDim2.new(0, 15, 0, 0)
         
         local icon = createLabel(btn, "+", Enum.TextXAlignment.Right, Enum.Font.GothamBold, 16, C.Accent)
         icon.Size = UDim2.new(0, 20, 1, 0); icon.Position = UDim2.new(1, -25, 0, 0)
-        
-        local listFrame = Instance.new("Frame")
-        listFrame.Size = UDim2.new(1, 0, 1, -45)
-        listFrame.Position = UDim2.new(0, 0, 0, 45)
-        listFrame.BackgroundTransparency = 1
-        listFrame.Parent = drop
+
+        local listContainer = Instance.new("Frame")
+        listContainer.BackgroundColor3 = C.ElementBG
+        listContainer.BorderColor3 = C.Accent
+        listContainer.BorderSizePixel = 1
+        listContainer.Visible = false
+        listContainer.ClipsDescendants = true
+        listContainer.ZIndex = 100
+        listContainer.Parent = Win
+
+        local listScroll = Instance.new("ScrollingFrame")
+        listScroll.Size = UDim2.new(1, 0, 1, 0)
+        listScroll.BackgroundTransparency = 1
+        listScroll.ScrollBarThickness = 3
+        listScroll.ScrollBarImageColor3 = C.Accent
+        listScroll.Parent = listContainer
         
         local dList = Instance.new("UIListLayout")
         dList.SortOrder = Enum.SortOrder.LayoutOrder
-        dList.Parent = listFrame
-        
-        local open = false
+        dList.Padding = UDim.new(0, 2)
+        dList.Parent = listScroll
+
+        local pad = Instance.new("UIPadding"); pad.PaddingLeft = UDim.new(0, 2); pad.PaddingRight = UDim.new(0, 2); pad.PaddingTop = UDim.new(0, 2); pad.PaddingBottom = UDim.new(0, 2); pad.Parent = listScroll
+
         btn.Activated:Connect(function()
-            open = not open
-            local targetSize = open and 45 + (#list * 35) or 45
-            icon.Text = open and "-" or "+"
-            TweenService:Create(drop, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, targetSize)}):Play()
+            local willOpen = not listContainer.Visible
+            if activeDropdown and activeDropdown ~= listContainer then activeDropdown.Visible = false end
+            
+            icon.Text = willOpen and "-" or "+"
+            listContainer.Visible = willOpen
+            activeDropdown = willOpen and listContainer or nil
+
+            if willOpen then
+                local itemHeight = 35; local listPadding = 4; local maxHeight = 150
+                local totalHeight = (#list * itemHeight) + ((#list - 1) * dList.Padding.Offset) + listPadding
+                local finalHeight = math.min(totalHeight, maxHeight)
+
+                listContainer.Size = UDim2.new(0, btn.AbsoluteSize.X, 0, finalHeight)
+                local xPos = btn.AbsolutePosition.X - Win.AbsolutePosition.X
+                local yPos = btn.AbsolutePosition.Y - Win.AbsolutePosition.Y + btn.AbsoluteSize.Y
+                if (btn.AbsolutePosition.Y + btn.AbsoluteSize.Y + finalHeight) > Gui.AbsoluteSize.Y then
+                    yPos = btn.AbsolutePosition.Y - Win.AbsolutePosition.Y - finalHeight
+                end
+                listContainer.Position = UDim2.new(0, xPos, 0, yPos)
+            end
         end)
         
         for _, item in ipairs(list) do
@@ -515,25 +541,22 @@ function Library:CreateTab(name)
             iBtn.TextSize = 13
             iBtn.TextXAlignment = Enum.TextXAlignment.Left
             iBtn.BorderSizePixel = 0
-            iBtn.Parent = listFrame
+            iBtn.AutoButtonColor = false
+            iBtn.Parent = listScroll
+
+            iBtn.MouseEnter:Connect(function() iBtn.BackgroundColor3 = C.ElementHover end)
+            iBtn.MouseLeave:Connect(function() iBtn.BackgroundColor3 = C.ElementBG end)
             
             iBtn.Activated:Connect(function()
-                if currentSelected == item then
-                    currentSelected = nil
-                    lbl.Text = title .. ": None"
-                    if callback then callback(nil) end
-                else
-                    currentSelected = item
-                    lbl.Text = title .. ": " .. item
-                    if callback then callback(item) end
-                end
-                open = false
+                if currentSelected == item then currentSelected = nil; lbl.Text = title .. ": None"; if callback then callback(nil) end
+                else currentSelected = item; lbl.Text = title .. ": " .. item; if callback then callback(item) end end
                 icon.Text = "+"
-                TweenService:Create(drop, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 45)}):Play()
+                listContainer.Visible = false
+                activeDropdown = nil
             end)
         end
     end
-
+    
     function Elements:CreateSlider(title, min, max, default, callback)
         local safeMin = min or 0
         local safeMax = max or 100
@@ -543,7 +566,6 @@ function Library:CreateTab(name)
         slider.Size = UDim2.new(1, 0, 0, 60)
         slider.BackgroundColor3 = C.ElementBG
         slider.Parent = Page
-        round(slider, 8)
         
         local lbl = createLabel(slider, title .. ": " .. safeDefault, Enum.TextXAlignment.Left, Enum.Font.Gotham, 13, C.Text)
         lbl.Size = UDim2.new(1, -30, 0, 30); lbl.Position = UDim2.new(0, 15, 0, 0)
@@ -590,66 +612,80 @@ function Library:CreateTab(name)
     function Elements:CreateMultiDropdown(title, list, defaultDict, callback)
         list = list or {}
         local selected = defaultDict or {}
-        local drop = Instance.new("Frame")
-        drop.Size = UDim2.new(1, 0, 0, 45)
-        drop.BackgroundColor3 = C.ElementBG
-        drop.ClipsDescendants = true
-        drop.Parent = Page
         
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, 0, 0, 45)
-        btn.BackgroundTransparency = 1
+        btn.BackgroundColor3 = C.ElementBG
         btn.Text = ""
-        btn.Parent = drop
+        btn.AutoButtonColor = false
+        btn.Parent = Page
         
         local lbl = createLabel(btn, title, Enum.TextXAlignment.Left, Enum.Font.Gotham, 13, C.Text)
         lbl.Size = UDim2.new(1, -40, 1, 0); lbl.Position = UDim2.new(0, 15, 0, 0)
         
         local icon = createLabel(btn, "+", Enum.TextXAlignment.Right, Enum.Font.GothamBold, 16, C.Accent)
         icon.Size = UDim2.new(0, 20, 1, 0); icon.Position = UDim2.new(1, -25, 0, 0)
-        
-        local listFrame = Instance.new("Frame")
-        listFrame.Size = UDim2.new(1, 0, 1, -45)
-        listFrame.Position = UDim2.new(0, 0, 0, 45)
-        listFrame.BackgroundTransparency = 1
-        listFrame.Parent = drop
+
+        local listContainer = Instance.new("Frame")
+        listContainer.BackgroundColor3 = C.ElementBG
+        listContainer.BorderColor3 = C.Accent
+        listContainer.BorderSizePixel = 1
+        listContainer.Visible = false
+        listContainer.ClipsDescendants = true
+        listContainer.ZIndex = 100
+        listContainer.Parent = Win
+
+        local listScroll = Instance.new("ScrollingFrame")
+        listScroll.Size = UDim2.new(1, 0, 1, 0)
+        listScroll.BackgroundTransparency = 1
+        listScroll.ScrollBarThickness = 3
+        listScroll.ScrollBarImageColor3 = C.Accent
+        listScroll.Parent = listContainer
         
         local dList = Instance.new("UIListLayout")
         dList.SortOrder = Enum.SortOrder.LayoutOrder
-        dList.Parent = listFrame
-        
-        local open = false
+        dList.Padding = UDim.new(0, 2)
+        dList.Parent = listScroll
+
+        local pad = Instance.new("UIPadding"); pad.PaddingLeft = UDim.new(0, 2); pad.PaddingRight = UDim.new(0, 2); pad.PaddingTop = UDim.new(0, 2); pad.PaddingBottom = UDim.new(0, 2); pad.Parent = listScroll
+
         btn.Activated:Connect(function()
-            open = not open
-            local targetSize = open and 45 + (#list * 35) or 45
-            icon.Text = open and "-" or "+"
-            TweenService:Create(drop, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, targetSize)}):Play()
+            local willOpen = not listContainer.Visible
+            if activeDropdown and activeDropdown ~= listContainer then activeDropdown.Visible = false end
+            
+            icon.Text = willOpen and "-" or "+"
+            listContainer.Visible = willOpen
+            activeDropdown = willOpen and listContainer or nil
+
+            if willOpen then
+                local itemHeight = 35; local listPadding = 4; local maxHeight = 150
+                local totalHeight = (#list * itemHeight) + ((#list - 1) * dList.Padding.Offset) + listPadding
+                local finalHeight = math.min(totalHeight, maxHeight)
+
+                listContainer.Size = UDim2.new(0, btn.AbsoluteSize.X, 0, finalHeight)
+                local xPos = btn.AbsolutePosition.X - Win.AbsolutePosition.X
+                local yPos = btn.AbsolutePosition.Y - Win.AbsolutePosition.Y + btn.AbsoluteSize.Y
+                if (btn.AbsolutePosition.Y + btn.AbsoluteSize.Y + finalHeight) > Gui.AbsoluteSize.Y then
+                    yPos = btn.AbsolutePosition.Y - Win.AbsolutePosition.Y - finalHeight
+                end
+                listContainer.Position = UDim2.new(0, xPos, 0, yPos)
+            end
         end)
         
         local function updateLabel()
-            local count = 0
-            for k, v in pairs(selected) do if v then count = count + 1 end end
-            lbl.Text = title .. " (" .. count .. ")"
+            local count = 0; for k, v in pairs(selected) do if v then count = count + 1 end end; lbl.Text = title .. " (" .. count .. ")"
         end
         
         for _, item in ipairs(list) do
             local iBtn = Instance.new("TextButton")
             iBtn.Size = UDim2.new(1, 0, 0, 35)
             iBtn.BackgroundColor3 = C.ElementBG
-            iBtn.Text = "  " .. item .. (selected[item] and " [ON]" or "")
-            iBtn.TextColor3 = selected[item] and C.Accent or C.Muted
-            iBtn.Font = Enum.Font.Gotham
-            iBtn.TextSize = 13
-            iBtn.TextXAlignment = Enum.TextXAlignment.Left
-            iBtn.BorderSizePixel = 0
-            iBtn.Parent = listFrame
+            iBtn.Text = "  " .. item .. (selected[item] and " [ON]" or ""); iBtn.TextColor3 = selected[item] and C.Accent or C.Muted; iBtn.Font = Enum.Font.Gotham; iBtn.TextSize = 13; iBtn.TextXAlignment = Enum.TextXAlignment.Left; iBtn.BorderSizePixel = 0; iBtn.AutoButtonColor = false; iBtn.Parent = listScroll
+            iBtn.MouseEnter:Connect(function() iBtn.BackgroundColor3 = C.ElementHover end)
+            iBtn.MouseLeave:Connect(function() iBtn.BackgroundColor3 = C.ElementBG end)
             
             iBtn.Activated:Connect(function()
-                selected[item] = not selected[item]
-                iBtn.Text = "  " .. item .. (selected[item] and " [ON]" or "")
-                iBtn.TextColor3 = selected[item] and C.Accent or C.Muted
-                updateLabel()
-                if callback then callback(selected) end
+                selected[item] = not selected[item]; iBtn.Text = "  " .. item .. (selected[item] and " [ON]" or ""); iBtn.TextColor3 = selected[item] and C.Accent or C.Muted; updateLabel(); if callback then callback(selected) end
             end)
         end
         updateLabel()
@@ -689,9 +725,9 @@ MainTab:CreateToggle("Auto Equip Fruit", false, function(val) S.autoFruit = val 
 MainTab:CreateMultiDropdown("Auto Skills", {"Skill Z", "Skill X", "Skill C", "Skill V", "Skill F"}, S.autoSkills, function(val) S.autoSkills = val end)
 
 MainTab:CreateSection("Settings")
-MainTab:CreateDropdown("Teleport Mode", {"Tween", "Instant"}, "Tween", function(val) S.teleportMode = val end)
-MainTab:CreateDropdown("Farm Position", {"Above", "Behind"}, "Above", function(val) S.farmPos = val end)
-MainTab:CreateSlider("Distance", 0, 10, 10, function(val) S.farmDistance = val end)
+MainTab:CreateDropdown("Teleport Mode", {"Tween", "Instant"}, "Instant", function(val) S.teleportMode = val end)
+MainTab:CreateDropdown("Farm Position", {"Above", "Behind"}, "Behind", function(val) S.farmPos = val end)
+MainTab:CreateSlider("Distance", 0, 10, 8, function(val) S.farmDistance = val end)
 
 local BossTab = Library:CreateTab("Boss Hunt")
 BossTab:CreateMultiDropdown("Target Bosses", BOSS_LIST, {}, function(val) S.huntBosses = val end)
