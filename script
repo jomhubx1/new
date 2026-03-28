@@ -732,7 +732,6 @@ local function SmartTeleport(targetCFrame)
     if dist < 50 then hrp.CFrame = targetCFrame; return end
     
     if S.teleportMode == "Instant" then
-        if dist > 500 then pcall(function() LocalPlayer:RequestStreamAroundAsync(targetCFrame.Position) end); task.wait(0.1) end
         hrp.CFrame = targetCFrame
         return
     end
@@ -745,8 +744,8 @@ local function SmartTeleport(targetCFrame)
     
     local bv = hrp:FindFirstChild("JomTeleportBV")
     if not bv then
-        bv = Instance.new("BodyVelocity")
-        bv.Name = "JomTeleportBV"; bv.Velocity = Vector3.zero; bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge); bv.Parent = hrp
+		bv = Instance.new("LinearVelocity")
+		bv.Name = "JomTeleportBV"; bv.VectorVelocity = Vector3.zero; bv.MaxForce = math.huge; bv.RelativeTo = Enum.ActuatorRelativeTo.World; bv.Attachment0 = hrp:FindFirstChildOfClass("Attachment") or Instance.new("Attachment", hrp); bv.Parent = hrp
     end
     
     local tweenInfo = TweenInfo.new(timeToReach, Enum.EasingStyle.Linear)
@@ -979,7 +978,7 @@ task.spawn(function()
         
         local fbv = hrp:FindFirstChild("JomFarmBV")
         if not fbv then
-            fbv = Instance.new("BodyVelocity"); fbv.Name = "JomFarmBV"; fbv.MaxForce = Vector3.new(math.huge, math.huge, math.huge); fbv.Velocity = Vector3.zero; fbv.Parent = hrp
+            fbv = Instance.new("LinearVelocity"); fbv.Name = "JomFarmBV"; fbv.MaxForce = math.huge; fbv.VectorVelocity = Vector3.zero; fbv.RelativeTo = Enum.ActuatorRelativeTo.World; fbv.Attachment0 = hrp:FindFirstChildOfClass("Attachment") or Instance.new("Attachment", hrp); fbv.Parent = hrp
         end
         
         local activeMob = ""
@@ -1202,7 +1201,7 @@ task.spawn(function()
                         else char:SetAttribute("BossLoadWaitAttempts", waitAttempts + 1) end
                     else char:SetAttribute("BossLoadWaitAttempts", 0) end
                     if containerPos and hrp then
-                        if (hrp.Position - containerPos).Magnitude > 50 then SmartTeleport(CFrame.new(containerPos + Vector3.new(0, 15, 0))) else hrp.Velocity = Vector3.zero; task.wait(1) end
+                        if (hrp.Position - containerPos).Magnitude > 50 then SmartTeleport(CFrame.new(containerPos + Vector3.new(0, 15, 0))) else pcall(function() hrp.AssemblyLinearVelocity = Vector3.zero end); task.wait(1) end
                     else task.wait(1) end
                     continue
                 end
@@ -1216,7 +1215,7 @@ task.spawn(function()
                             char:SetAttribute("BossLoadWaitAttempts", 0); task.wait(1); continue
                         else
                             char:SetAttribute("BossLoadWaitAttempts", waitAttempts + 1)
-                            if (hrp.Position - containerPos).Magnitude > 20 then SmartTeleport(CFrame.new(containerPos + Vector3.new(0, 15, 0))) else hrp.Velocity = Vector3.zero end
+                            if (hrp.Position - containerPos).Magnitude > 20 then SmartTeleport(CFrame.new(containerPos + Vector3.new(0, 15, 0))) else pcall(function() hrp.AssemblyLinearVelocity = Vector3.zero end) end
                             task.wait(1); continue
                         end
                     else
@@ -1280,7 +1279,7 @@ task.spawn(function()
                     SmartTeleport(CFrame.new(part.Position + Vector3.new(0, 3, 4)))
                 else
                     hrp.CFrame = CFrame.lookAt(part.Position + Vector3.new(0, 3, 4), part.Position)
-                    hrp.Velocity = Vector3.zero
+                    pcall(function() hrp.AssemblyLinearVelocity = Vector3.zero end)
                     local posKey = math.floor(part.Position.X) .. "_" .. math.floor(part.Position.Z)
                     S.lastTargetedCrystalPos = posKey
                     task.wait(0.2)
@@ -1371,7 +1370,7 @@ task.spawn(function()
                 elseif (hrp.Position - goalCF.Position).Magnitude > 50 then
                     SmartTeleport(goalCF)
                 else
-                    hrp.CFrame = goalCF; hrp.Velocity = Vector3.zero
+                    hrp.CFrame = goalCF; pcall(function() hrp.AssemblyLinearVelocity = Vector3.zero end)
                     
                     local la = type(lastAttackTick) == "number" and lastAttackTick or 0
                     if tick() - la > 0.1 then
@@ -1389,16 +1388,13 @@ task.spawn(function()
                 end
             end
         elseif unloadedMobPos then
-            pcall(function() LocalPlayer:RequestStreamAroundAsync(unloadedMobPos) end)
             SmartTeleport(CFrame.new(unloadedMobPos + Vector3.new(0, 15, 0)))
         elseif containerPos then
-            pcall(function() LocalPlayer:RequestStreamAroundAsync(containerPos) end)
-            if hrp and (hrp.Position - containerPos).Magnitude > 50 then SmartTeleport(CFrame.new(containerPos + Vector3.new(0, 15, 0))) else hrp.Velocity = Vector3.zero end
+            if hrp and (hrp.Position - containerPos).Magnitude > 50 then SmartTeleport(CFrame.new(containerPos + Vector3.new(0, 15, 0))) else pcall(function() hrp.AssemblyLinearVelocity = Vector3.zero end) end
         elseif questPos then
             -- Stand near the Quest NPC so the chunk loads and the mob boss can spawn
-            pcall(function() LocalPlayer:RequestStreamAroundAsync(questPos) end)
             local waitOffset = CFrame.new(questPos) * CFrame.Angles(0, math.rad(180), 0) * CFrame.new(0, 15, -20)
-            if hrp and (hrp.Position - waitOffset.Position).Magnitude > 50 then SmartTeleport(waitOffset) else hrp.Velocity = Vector3.zero end
+            if hrp and (hrp.Position - waitOffset.Position).Magnitude > 50 then SmartTeleport(waitOffset) else pcall(function() hrp.AssemblyLinearVelocity = Vector3.zero end) end
         else
             if fbv then fbv:Destroy() end
             task.wait(0.5)
