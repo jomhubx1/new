@@ -754,6 +754,28 @@ function Library:CreateTab(name)
         return lbl
     end
 
+    function Elements:CreateButton(title, callback)
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, 0, 0, 45)
+        btn.BackgroundColor3 = C.ElementBG
+        btn.Text = ""
+        btn.AutoButtonColor = false
+        btn.Parent = Page
+        
+        local lbl = createLabel(btn, title, Enum.TextXAlignment.Center, Enum.Font.GothamBold, 13, C.Text)
+        lbl.Size = UDim2.new(1, 0, 1, 0)
+        
+        btn.MouseEnter:Connect(function() btn.BackgroundColor3 = C.ElementHover end)
+        btn.MouseLeave:Connect(function() btn.BackgroundColor3 = C.ElementBG end)
+        
+        btn.Activated:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.1), {BackgroundColor3 = C.Accent}):Play()
+            task.delay(0.1, function() TweenService:Create(btn, TweenInfo.new(0.1), {BackgroundColor3 = C.ElementHover}):Play() end)
+            if callback then callback() end
+        end)
+        return btn
+    end
+
     return Elements
 end
 
@@ -973,6 +995,33 @@ MiscTab:CreateDropdown("Difficulty", {"Normal", "Medium", "Hard", "Extreme"}, S.
 MiscTab:CreateToggle("Auto Summon Boss", S.autoSummon, function(val) 
     S.autoSummon = val 
     saveConfig("AutoSummon", val)
+end)
+
+local SettingTab = Library:CreateTab("SETTING")
+SettingTab:CreateSection("Config Management")
+SettingTab:CreateButton("Clear / Delete Config", function()
+    local cleared = false
+    if delfolder then
+        local s = pcall(function() delfolder("JomHUB_Configs") end)
+        if s then cleared = true end
+    end
+    if not cleared and delfile and listfiles then
+        pcall(function()
+            for _, file in ipairs(listfiles("JomHUB_Configs")) do
+                pcall(delfile, file)
+            end
+        end)
+    end
+    
+    -- Failsafe to instantly stop auto-loading if delete fails
+    if writefile then
+        pcall(function()
+            if not isfolder("JomHUB_Configs") then makefolder("JomHUB_Configs") end
+            writefile("JomHUB_Configs/JomHubMobile_autoload.txt", "")
+            writefile("JomHUB_Configs/SailorPieceMobile_autoload.txt", "")
+            writefile("JomHUB_Configs/SailorPiece_autoload.txt", "")
+        end)
+    end
 end)
 
 -- =========================================================
