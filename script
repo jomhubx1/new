@@ -1195,17 +1195,6 @@ if OpenInfiniteTowerUI then
     end)
 end
 
-task.spawn(function()
-    while task.wait(1) do
-        for k, info in pairs(BossTimersCache) do
-            if not info.isAlive then
-                local t = type(info.timer) == "number" and info.timer or 0
-                if t > 0 then info.timer = t - 1 end
-            end
-        end
-    end
-end)
-
 local MELEE_LIST = {"Anos", "King of heroes", "Strongest in History", "Strongest of Today", "Madoka", "Alucard", "Qin Shi", "Curse king", "Limitless sorcerer", "Yuji", "Combat", "Corrupted Excalibur", "Strongest Shinobi", "Blessed Maiden", "Saber Alter", "Fists", "Brass Knuckles", "Fighting Style", "Gauntlets", "Dragon Gauntlets"}
 local SWORD_LIST = {"Shadow Monarch", "Sin of pride", "Rimuru", "Shadow", "Ichigo", "Manipulator", "Ragna", "Solo hunter", "Excalibur", "Dark Blade", "Katana", "Gryphon", "True Manipulator", "Atomic", "Abyssal Empress", "Sword", "KatanaSword", "Cutlass", "Longsword", "Dual Katana"}
 local FRUIT_LIST = {"Light", "Quake", "Flame", "Bomb", "Invisible"}
