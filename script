@@ -22,28 +22,47 @@ end)
 local function ServerHop()
     task.spawn(function()
         math.randomseed(tick())
-        local sfUrl = "https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Desc&limit=100"
-        local success, req = pcall(function() return request({Url = string.format(sfUrl, game.PlaceId)}) end)
-        if success and req and req.Body then
-            local s2, body = pcall(function() return HttpService:JSONDecode(req.Body) end)
-            if s2 and body and body.data then
-                local validServers = {}
-                for _, s in ipairs(body.data) do
-                    if type(s) == "table" and s.playing and s.maxPlayers and s.playing < (s.maxPlayers - 1) and s.id ~= game.JobId then
-                        table.insert(validServers, s)
-                    end
+        local urls = {
+            "https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100",
+            "https://games.roproxy.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"
+        }
+        
+        local serverData = nil
+        for _, urlTemplate in ipairs(urls) do
+            local url = string.format(urlTemplate, game.PlaceId)
+            local success, result = pcall(function()
+                if request then
+                    return request({Url = url, Method = "GET"}).Body
+                elseif game.HttpGet then
+                    return game:HttpGet(url)
                 end
-                if #validServers > 0 then
-                    for i = #validServers, 2, -1 do
-                        local j = math.random(1, i)
-                        validServers[i], validServers[j] = validServers[j], validServers[i]
-                    end
+            end)
+            if success and result and type(result) == "string" then
+                local s2, decoded = pcall(function() return HttpService:JSONDecode(result) end)
+                if s2 and decoded and decoded.data then
+                    serverData = decoded.data
+                    break
+                end
+            end
+        end
 
-                    for _, serverToJoin in ipairs(validServers) do
-                        pcall(function() game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, serverToJoin.id, LocalPlayer) end)
-                        task.wait(1.5) -- Give the teleport a moment to fire
-                        return
-                    end
+        if serverData then
+            local validServers = {}
+            for _, s in ipairs(serverData) do
+                if type(s) == "table" and s.playing and s.maxPlayers and s.playing < (s.maxPlayers - 1) and s.id ~= game.JobId then
+                    table.insert(validServers, s)
+                end
+            end
+            if #validServers > 0 then
+                for i = #validServers, 2, -1 do
+                    local j = math.random(1, i)
+                    validServers[i], validServers[j] = validServers[j], validServers[i]
+                end
+
+                for _, serverToJoin in ipairs(validServers) do
+                    pcall(function() game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, serverToJoin.id, LocalPlayer) end)
+                    task.wait(2) -- Give the teleport a moment to fire
+                    return
                 end
             end
         end
